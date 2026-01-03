@@ -73,7 +73,7 @@ def handle_audio(message):
             bot.send_audio(
                 chat_id, 
                 audio_file,
-                caption=f"✅ <b>Musiqa tahrirlandi!</b>\n\n👤 <b>Artist:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
+                caption=f"⚡ <b>High Quality</b>\n\n👤 <b>Artist:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
                 parse_mode="HTML",
                 thumb=thumb,
                 performer=FIXED_ARTIST,
