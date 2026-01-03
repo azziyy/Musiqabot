@@ -27,7 +27,7 @@ keep_alive()
 # ---------------------------------------------------------------------
 
 # --- SOZLAMALAR ---
-API_TOKEN = '8158093361:AAE4JR-rZWBNlvY_YOKxHmrOPj1rtqzqZUo'
+API_TOKEN = '8158093361:AAELuYvWD7CqucE9GxkYILbgBPk3AqNnzmo'
 FIXED_ARTIST = "Subscribe"       # Musiqaning artist qismiga yoziladigan nom
 FIXED_ALBUM = "@freestyle_beat"      # Albom qismiga yoziladigan nom
 IMAGE_PATH = "cover.jpg"              # GitHub'dagi rasm nomi
