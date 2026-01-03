@@ -1,7 +1,26 @@
 import os
+from flask import Flask
+from threading import Thread
 import telebot
 from telebot import types
 from mutagen.id3 import ID3, APIC, TPE1, TALB, TIT2
+
+# --- RENDER PORT XATOSINI TUZATISH ---
+app = Flask('')
+@app.route('/')
+def home():
+    return "Bot ishlayapti!"
+
+def run():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+keep_alive()
+# -------------------------------------
 
 # --- SOZLAMALAR ---
 API_TOKEN = '8158093361:AAE4JR-rZWBNlvY_YOKxHmrOPj1rtqzqZUo'
@@ -60,6 +79,7 @@ def handle_audio(message):
                 parse_mode="Markdown",
                 thumb=thumb,
                 performer=FIXED_ARTIST,
+                title=message.audio.title,
                 reply_markup=markup
             )
             if thumb: thumb.close()
@@ -67,10 +87,11 @@ def handle_audio(message):
         bot.delete_message(chat_id, msg.message_id)
 
     except Exception as e:
-        bot.edit_message_text(f"❌ **Xatolik:** {str(e)}", chat_id, msg.message_id)
+        bot.send_message(chat_id, f"❌ **Xatolik:** {str(e)}")
     
     finally:
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
+print("Bot ishga tushdi...")
 bot.polling(none_stop=True)
