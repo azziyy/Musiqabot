@@ -1,86 +1,76 @@
 import os
 import telebot
+from telebot import types
 from mutagen.id3 import ID3, APIC, TPE1, TALB, TIT2
 
 # --- SOZLAMALAR ---
 API_TOKEN = '8158093361:AAE4JR-rZWBNlvY_YOKxHmrOPj1rtqzqZUo'
-FIXED_ARTIST = "Mening Kanalim"       # Artist qismiga yoziladigan nom
-FIXED_ALBUM = "@kanalingiz_linki"    # Albom qismiga yoziladigan nom
-IMAGE_PATH = "cover.jpg"              # GitHub'ga yuklangan rasm nomi
+FIXED_ARTIST = "Mening Kanalim"       # Artist nomi
+FIXED_ALBUM = "@kanalingiz_linki"    # Albom nomi
+IMAGE_PATH = "cover.jpg"              # GitHub'dagi rasm nomi
 # ------------------
 
 bot = telebot.TeleBot(API_TOKEN)
 
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Salom! Menga musiqa (mp3) yuboring, men uni kanalingiz nomiga moslab tahrirlab beraman. 🎵")
+def start(message):
+    bot.send_message(message.chat.id, "🎵 **Xush kelibsiz!**\nMenga musiqa yuboring, uni tahrirlab beraman.")
 
 @bot.message_handler(content_types=['audio'])
 def handle_audio(message):
     chat_id = message.chat.id
-    # Vaqtinchalik fayl nomlari
-    temp_music = f"music_{chat_id}.mp3"
+    temp_file = f"music_{message.audio.file_id}.mp3"
+    
+    msg = bot.send_message(chat_id, "📥 **Fayl qayta ishlanmoqda...**")
     
     try:
-        status_msg = bot.send_message(chat_id, "⏳ Jarayon bajarilmoqda...")
-
-        # 1. Faylni yuklab olish
+        # Faylni yuklab olish
         file_info = bot.get_file(message.audio.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        with open(temp_music, 'wb') as f:
+        with open(temp_file, 'wb') as f:
             f.write(downloaded_file)
 
-        # 2. Metadatalarni (Teglarni) o'zgartirish
+        # Metadatalarni o'zgartirish
         try:
-            audio = ID3(temp_music)
+            audio = ID3(temp_file)
         except:
             audio = ID3()
 
-        # Artist, Albom va Qo'shiq nomi
         audio['TPE1'] = TPE1(encoding=3, text=FIXED_ARTIST)
         audio['TALB'] = TALB(encoding=3, text=FIXED_ALBUM)
         audio['TIT2'] = TIT2(encoding=3, text=message.audio.title or "Music")
         
-        # Musiqa ichiga rasmini joylash
         if os.path.exists(IMAGE_PATH):
             with open(IMAGE_PATH, 'rb') as img:
-                audio['APIC'] = APIC(
-                    encoding=3,
-                    mime='image/jpeg',
-                    type=3,
-                    desc='Cover',
-                    data=img.read()
-                )
-        
+                audio['APIC'] = APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=img.read())
         audio.save(v2_version=3)
 
-        # 3. Tayyor faylni yuborish
-        with open(temp_music, 'rb') as music_file:
-            # Thumbnail (kichik rasm) ko'rinishi uchun
-            thumb_file = open(IMAGE_PATH, 'rb') if os.path.exists(IMAGE_PATH) else None
-            
+        # Tugma qo'shish (Inline Button)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("📢 Kanalimizga a'zo bo'ling", url="https://t.me/freestyle_beat"))
+
+        # Yuborish
+        with open(temp_file, 'rb') as audio_file:
+            thumb = open(IMAGE_PATH, 'rb') if os.path.exists(IMAGE_PATH) else None
             bot.send_audio(
                 chat_id, 
-                music_file, 
-                caption=f"✅ <b>Tahrirlandi:</b> {FIXED_ARTIST}\n@sizning_kanalingiz",
-                parse_mode="HTML",
-                thumb=thumb_file, # Rasm tepadagi kichik holatda chiqishi uchun
+                audio_file,
+                caption=f"✅ **Musiqa tahrirlandi!**\n\n👤 **Artist:** {FIXED_ARTIST}\n💿 **Albom:** {FIXED_ALBUM}",
+                parse_mode="Markdown",
+                thumb=thumb,
                 performer=FIXED_ARTIST,
-                title=message.audio.title
+                reply_markup=markup
             )
-            
-            if thumb_file: thumb_file.close()
+            if thumb: thumb.close()
 
-        # 4. Tozalash (Serverdan faylni o'chirish)
-        bot.delete_message(chat_id, status_msg.message_id)
-        if os.path.exists(temp_music):
-            os.remove(temp_music)
+        bot.delete_message(chat_id, msg.message_id)
 
     except Exception as e:
-        bot.send_message(chat_id, f"❌ Xatolik yuz berdi: {e}")
-        if os.path.exists(temp_music):
-            os.remove(temp_music)
+        bot.edit_message_text(f"❌ **Xatolik:** {str(e)}", chat_id, msg.message_id)
+    
+    finally:
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
 
-print("Bot ishga tushdi...")
 bot.polling(none_stop=True)
