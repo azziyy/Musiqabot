@@ -28,7 +28,7 @@ keep_alive()
 
 # --- SOZLAMALAR ---
 API_TOKEN = '8158093361:AAE4JR-rZWBNlvY_YOKxHmrOPj1rtqzqZUo'
-FIXED_ARTIST = "Mening Kanalim"       # Musiqaning artist qismiga yoziladigan nom
+FIXED_ARTIST = "Subscribe"       # Musiqaning artist qismiga yoziladigan nom
 FIXED_ALBUM = "@freestyle_beat"      # Albom qismiga yoziladigan nom
 IMAGE_PATH = "cover.jpg"              # GitHub'dagi rasm nomi
 # ------------------
@@ -85,7 +85,7 @@ def handle_audio(message):
 
         # 3. Inline Tugma (Kanalga havola)
         markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("📢 Kanalga a'zo bo'ling", url="https://t.me/freestyle_beat"))
+        markup.add(types.InlineKeyboardButton("📢 Kanalimizga a'zo bo'ling", url="https://t.me/freestyle_beat"))
 
         # 4. Tayyor faylni yuborish
         with open(temp_file, 'rb') as audio_file:
@@ -95,7 +95,7 @@ def handle_audio(message):
             bot.send_audio(
                 chat_id, 
                 audio_file,
-                caption=f"⚡ <b>New</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
+                caption=f"⚡ <b>New:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
                 parse_mode="HTML",
                 thumb=thumb,
                 performer=FIXED_ARTIST,
