@@ -27,10 +27,11 @@ keep_alive()
 # ---------------------------------------------------------------------
 
 # --- SOZLAMALAR ---
+# DIQQAT: Token yangilangan bo'lsa, @BotFather'dan olgan oxirgi tokenni qo'ying
 API_TOKEN = '8158093361:AAELuYvWD7CqucE9GxkYILbgBPk3AqNnzmo'
-FIXED_ARTIST = "Subscribe"       # Musiqaning artist qismiga yoziladigan nom
-FIXED_ALBUM = "@freestyle_beat"      # Albom qismiga yoziladigan nom
-IMAGE_PATH = "cover.jpg"              # GitHub'dagi rasm nomi
+FIXED_ARTIST = "Subscribe"       
+FIXED_ALBUM = "@freestyle_beat"    
+IMAGE_PATH = "cover.jpg"              
 # ------------------
 
 bot = telebot.TeleBot(API_TOKEN)
@@ -46,31 +47,26 @@ def start(message):
 @bot.message_handler(content_types=['audio'])
 def handle_audio(message):
     chat_id = message.chat.id
-    # Har bir foydalanuvchi uchun alohida fayl nomi yaratamiz
     temp_file = f"music_{chat_id}_{message.audio.file_id}.mp3"
     
     msg = bot.send_message(chat_id, "⏳ <b>Fayl qayta ishlanmoqda...</b>", parse_mode="HTML")
     
     try:
-        # 1. Faylni Telegram serveridan yuklab olish
         file_info = bot.get_file(message.audio.file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
         with open(temp_file, 'wb') as f:
             f.write(downloaded_file)
 
-        # 2. Metadatalarni (Teglarni) o'zgartirish
         try:
             audio = ID3(temp_file)
         except:
             audio = ID3()
 
-        # Artist, Albom va Qo'shiq nomi (HTML xatolarisiz)
         audio['TPE1'] = TPE1(encoding=3, text=FIXED_ARTIST)
         audio['TALB'] = TALB(encoding=3, text=FIXED_ALBUM)
         audio['TIT2'] = TIT2(encoding=3, text=message.audio.title or "Music")
         
-        # Musiqa ichiga rasmni joylash
         if os.path.exists(IMAGE_PATH):
             with open(IMAGE_PATH, 'rb') as img:
                 audio['APIC'] = APIC(
@@ -83,13 +79,10 @@ def handle_audio(message):
         
         audio.save(v2_version=3)
 
-        # 3. Inline Tugma (Kanalga havola)
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("📢 Kanalimizga a'zo bo'ling", url="https://t.me/freestyle_beat"))
 
-        # 4. Tayyor faylni yuborish
         with open(temp_file, 'rb') as audio_file:
-            # Thumbnail (kichik rasm) ko'rinishi uchun rasm faylini ochamiz
             thumb = open(IMAGE_PATH, 'rb') if os.path.exists(IMAGE_PATH) else None
             
             bot.send_audio(
@@ -105,19 +98,23 @@ def handle_audio(message):
             
             if thumb: thumb.close()
 
-        # Jarayon tugagach xabarni o'chirish
         bot.delete_message(chat_id, msg.message_id)
 
     except Exception as e:
-        bot.send_message(chat_id, f"❌ <b>Xatolik yuz berdi:</b>\n<code>{str(e)}</code>", parse_mode="HTML")
+        bot.send_message(chat_id, f"❌ <b>Xatolik:</b>\n<code>{str(e)}</code>", parse_mode="HTML")
     
     finally:
-        # Server xotirasini tozalash (Faylni o'chirish)
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-# Botni doimiy ulanishda ushlab turish
+# --- CONFLICT 409 XATOSINI TUZATUVCHI QISM ---
 if __name__ == "__main__":
-    print("Bot muvaffaqiyatli ishga tushdi...")
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
-    
+    print("Bot ulanmoqda...")
+    try:
+        # Eski barcha ulanishlarni o'chirib tashlash
+        bot.remove_webhook()
+        # Botni cheksiz ulanishda ishga tushirish
+        bot.infinity_polling(timeout=20, long_polling_timeout=10)
+    except Exception as e:
+        print(f"Xatolik yuz berdi: {e}")
+        
