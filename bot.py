@@ -58,9 +58,7 @@ def edit_m4a(file_path, title):
         audio.save()
     except: pass
 
-# --- YOUTUBE YUKLOVCHI FUNKSIYA ---
 def download_yt(url, chat_id):
-    # Faylni vaqtinchalik nomlash
     file_name = f"yt_{chat_id}"
     ydl_opts = {
         'format': 'bestaudio/best',
@@ -75,49 +73,35 @@ def download_yt(url, chat_id):
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        # yt-dlp mp3 ga o'tkazgandan keyin fayl nomi o'zgaradi
         return file_name + ".mp3", info.get('title', 'YouTube Music'), int(info.get('duration', 0))
 
 # --- HANDLERLAR ---
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(message.chat.id, "<b>Tayyorman!</b>\n\n1. Musiqa fayli yuboring (.mp3, .m4a)\n2. YouTube link yuboring", parse_mode="HTML")
+    bot.send_message(message.chat.id, "<b>Tayyorman!</b>\n\nYouTube link yuboring yoki musiqa fayli tashlang.", parse_mode="HTML")
 
-# YouTube Link handler
-@bot.message_handler(regexp=r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+')
+@bot.message_handler(func=lambda m: m.text and ('youtube.com' in m.text or 'youtu.be' in m.text))
 def handle_youtube(message):
     chat_id = message.chat.id
-    msg = bot.send_message(chat_id, "📥 <b>YouTube'dan yuklanmoqda va tahrirlanmoqda...</b>", parse_mode="HTML")
-    
+    msg = bot.send_message(chat_id, "📥 <b>YouTube'dan yuklanmoqda...</b>", parse_mode="HTML")
     try:
         file_path, title, duration = download_yt(message.text, chat_id)
         edit_mp3(file_path, title)
-        
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("📢 Kanalimiz", url="https://t.me/freestyle_beat"))
-
         with open(file_path, 'rb') as audio_file:
             thumb = open(IMAGE_PATH, 'rb') if os.path.exists(IMAGE_PATH) else None
-            bot.send_audio(
-                chat_id, audio_file,
-                caption=f"⚡ <b>Freestyle:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
-                parse_mode="HTML", thumb=thumb, performer=FIXED_ARTIST, title=title, duration=duration, reply_markup=markup
-            )
+            bot.send_audio(chat_id, audio_file, caption=f"⚡ <b>New:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}", parse_mode="HTML", thumb=thumb, performer=FIXED_ARTIST, title=title, duration=duration)
             if thumb: thumb.close()
-        
         bot.delete_message(chat_id, msg.message_id)
         if os.path.exists(file_path): os.remove(file_path)
     except Exception as e:
-        bot.edit_message_text(f"❌ Xatolik: YouTube'dan yuklab bo'lmadi.", chat_id, msg.message_id)
+        bot.edit_message_text(f"❌ Xatolik yuz berdi. Linkni tekshiring.", chat_id, msg.message_id)
 
-# Oddiy fayllar handler
 @bot.message_handler(content_types=['audio', 'document'])
 def handle_audio(message):
     file_id = None
     file_name = ""
     orig_duration = 0
-    
     if message.content_type == 'audio':
         file_id = message.audio.file_id
         file_name = message.audio.title or "music"
@@ -127,45 +111,28 @@ def handle_audio(message):
         file_name = message.document.file_name
 
     if not file_id: return
-
     chat_id = message.chat.id
     ext = ".m4a" if "m4a" in file_name.lower() else ".mp3"
     temp_file = f"music_{chat_id}{ext}"
-    
     msg = bot.send_message(chat_id, "⏳ <b>Tahrirlanmoqda...</b>", parse_mode="HTML")
-
     try:
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         with open(temp_file, 'wb') as f: f.write(downloaded_file)
-
         if ext == ".m4a": edit_m4a(temp_file, file_name)
         else: edit_mp3(temp_file, file_name)
-
-        try:
-            audio_info = MutagenFile(temp_file)
-            duration = int(audio_info.info.length) if audio_info else orig_duration
-        except:
-            duration = orig_duration
-
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("📢 Kanalimiz", url="https://t.me/freestyle_beat"))
-
+        audio_info = MutagenFile(temp_file)
+        duration = int(audio_info.info.length) if audio_info else orig_duration
         with open(temp_file, 'rb') as audio_file:
             thumb = open(IMAGE_PATH, 'rb') if os.path.exists(IMAGE_PATH) else None
-            bot.send_audio(
-                chat_id, audio_file,
-                caption=f"⚡ <b>Freestyle:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}",
-                parse_mode="HTML", thumb=thumb, performer=FIXED_ARTIST, title=file_name, reply_markup=markup, duration=duration
-            )
+            bot.send_audio(chat_id, audio_file, caption=f"⚡ <b>New:</b> {FIXED_ARTIST}\n💿 <b>Albom:</b> {FIXED_ALBUM}", parse_mode="HTML", thumb=thumb, performer=FIXED_ARTIST, title=file_name, duration=duration)
             if thumb: thumb.close()
         bot.delete_message(chat_id, msg.message_id)
-    except:
-        bot.send_message(chat_id, "❌ Xatolik.")
+    except: bot.send_message(chat_id, "❌ Xatolik.")
     finally:
         if os.path.exists(temp_file): os.remove(temp_file)
 
 if __name__ == "__main__":
     bot.remove_webhook()
-    bot.infinity_polling(timeout=20)
-    
+    bot.infinity_polling(timeout=60, long_polling_timeout=30)
+            
